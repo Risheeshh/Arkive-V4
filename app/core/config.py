@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     DATABASE_URL: str = "postgresql://postgres:postgres@db:5432/bookmarks"
+    REDIS_URL: str = "redis://redis:6379/0"
     TEST_DATABASE_URL: str | None = None
     class Config:
         env_file = ".env"

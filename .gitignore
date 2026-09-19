@@ -1,5 +1,20 @@
 .env
+.env.example
 .aider*
 planning/
 CONVENTIONS.md
 ROADMAP.md
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS/editor
+.vscode/
+.DS_Store
