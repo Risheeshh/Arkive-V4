@@ -204,6 +204,7 @@ def process_bookmark(db: Session, bookmark_id: uuid.UUID):
             user_id=bookmark.user_id,
             title=cleaned_title,
             body=cleaned_body,
+            raw_text=cleaned_body,
             author=extracted.get("author"),
             published_at=extracted.get("published_at")
         )

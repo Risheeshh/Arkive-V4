@@ -12,6 +12,7 @@ class Content(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     title = Column(Text, nullable=True)
     body = Column(Text, nullable=True)
+    raw_text = Column(Text, nullable=True)
     author = Column(Text, nullable=True)
     published_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=func.now())

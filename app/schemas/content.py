@@ -6,6 +6,7 @@ from typing import Optional
 class ContentBase(BaseModel):
     title: Optional[str] = None
     body: Optional[str] = None
+    raw_text: Optional[str] = None
     author: Optional[str] = None
     published_at: Optional[datetime] = None
 

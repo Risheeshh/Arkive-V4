@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.core.config import settings
-from app.routers import auth, users, bookmarks
+from app.routers import auth, users, bookmarks, search
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -10,6 +10,7 @@ app = FastAPI(
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(users.router, prefix=settings.API_V1_STR)
 app.include_router(bookmarks.router, prefix=settings.API_V1_STR)
+app.include_router(search.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():

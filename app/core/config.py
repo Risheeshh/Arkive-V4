@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://postgres:postgres@db:5432/bookmarks"
     REDIS_URL: str = "redis://redis:6379/0"
     TEST_DATABASE_URL: str | None = None
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    CHROMA_PERSIST_DIRECTORY: str = "./data/chroma"
+    CHROMA_COLLECTION_NAME: str = "bookmark_chunks"
     class Config:
         env_file = ".env"
         case_sensitive = True
