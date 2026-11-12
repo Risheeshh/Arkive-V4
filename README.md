@@ -183,6 +183,28 @@ $env:TEST_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/bookmark
 
 On Unix-like systems, `./run_tests.sh` starts the Docker PostgreSQL/Redis services, recreates `bookmarks_test`, and runs the suite.
 
+## Engineering metrics
+
+The repository includes a reproducible collector for delivery, implementation, API-surface, test-inventory, dependency, and Git-history metrics. It uses only the Python standard library and writes generated reports to the ignored `metrics/` directory:
+
+```powershell
+python scripts/collect_engineering_metrics.py
+```
+
+On Windows, the convenience wrapper is:
+
+```powershell
+.\scripts\run_metrics.ps1
+```
+
+The static report does not claim that tests pass. After configuring the separate test database described above, run the real suite and include its result:
+
+```powershell
+.\scripts\run_metrics.ps1 -RunTests
+```
+
+This produces `metrics/engineering_metrics.json` for dashboards and `metrics/engineering_metrics.md` for a human-readable snapshot. Metrics are evidence, not product claims: Git-history totals reflect the checked-out repository, source/test lines are counted from Python files, API endpoints are extracted from router decorators, and pytest results are captured only when `--run-tests` is supplied.
+
 ## Known limitations and follow-up work
 
 - The API currently exposes bookmark CRUD, search, and chat; the graph, tag-management, rate-limiting, streaming chat, and chat-history items described in `ROADMAP.md` are not implemented.

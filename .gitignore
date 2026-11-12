@@ -42,4 +42,15 @@ Thumbs.db
 playwright-report/
 test-results/
 
+metrics/*.json
+metrics/*.md
+
 tests/
+
+# Ignore all files in the metrics directory except for the metrics/README.md file
+metrics/*
+
+docs/
+
+scripts/
+
