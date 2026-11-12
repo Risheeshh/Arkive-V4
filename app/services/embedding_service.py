@@ -118,8 +118,14 @@ def chunk_and_embed_bookmark(bookmark_id: uuid.UUID) -> int:
             embeddings=embeddings,
             documents=chunks,
             metadatas=[
-                {"bookmark_id": str(bookmark.id), "user_id": str(bookmark.user_id)}
-                for _ in chunks
+                {
+                    "bookmark_id": str(bookmark.id),
+                    "user_id": str(bookmark.user_id),
+                    "bookmark_title": bookmark.title,
+                    "url": bookmark.url,
+                    "chunk_index": index
+                }
+                for index in range(len(chunks))
             ],
         )
         return len(chunks)
@@ -141,7 +147,12 @@ def search_bookmarks(query: str, user_id: uuid.UUID, top_k: int) -> list[dict]:
     metadatas = result.get("metadatas", [[]])[0]
     distances = result.get("distances", [[]])[0]
     return [
-        {"chunk": document, "bookmark_id": metadata["bookmark_id"],
-         "distance": distances[index] if index < len(distances) else None}
+        {
+            "chunk": document,
+            "bookmark_id": metadata["bookmark_id"],
+            "bookmark_title": metadata.get("bookmark_title", "Unknown Title"),
+            "url": metadata.get("url", ""),
+            "distance": distances[index] if index < len(distances) else None
+        }
         for index, (document, metadata) in enumerate(zip(documents, metadatas))
     ]

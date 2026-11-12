@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
     CHROMA_PERSIST_DIRECTORY: str = "./data/chroma"
     CHROMA_COLLECTION_NAME: str = "bookmark_chunks"
+    GEMINI_API_KEY: Optional[str] = None
     class Config:
         env_file = ".env"
         case_sensitive = True

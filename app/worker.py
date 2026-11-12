@@ -13,8 +13,9 @@ logger = logging.getLogger(__name__)
 def process_bookmark_job(bookmark_id: str):
     db = SessionLocal()
     try:
-        process_bookmark(db, uuid.UUID(bookmark_id))
-        queue.enqueue("app.worker.chunk_and_embed_bookmark_job", bookmark_id)
+        processed = process_bookmark(db, uuid.UUID(bookmark_id))
+        if processed:
+            queue.enqueue("app.worker.chunk_and_embed_bookmark_job", bookmark_id)
     finally:
         db.close()
 

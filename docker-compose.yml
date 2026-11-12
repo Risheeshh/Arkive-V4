@@ -29,7 +29,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
     volumes:
       - .:/app
-      - chroma_data:/app/data
+      - chroma_data:/app/data/chroma
 
   worker:
     build: .
@@ -42,7 +42,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
     volumes:
       - .:/app
-      - chroma_data:/app/data
+      - chroma_data:/app/data/chroma
 
 volumes:
   postgres_data:

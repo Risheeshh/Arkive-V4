@@ -175,12 +175,12 @@ def process_bookmark(db: Session, bookmark_id: uuid.UUID):
     bookmark = db.query(Bookmark).filter(Bookmark.id == bookmark_id).first()
     if not bookmark:
         logger.error(f"Bookmark {bookmark_id} not found")
-        return
+        return False
 
     # Idempotency: if already processed (has content), skip
     if bookmark.content:
         logger.info(f"Bookmark {bookmark_id} already has content, skipping")
-        return
+        return True
 
     try:
         # Try trafilatura first
@@ -216,6 +216,7 @@ def process_bookmark(db: Session, bookmark_id: uuid.UUID):
         
         db.commit()
         logger.info(f"Successfully processed bookmark {bookmark_id}")
+        return True
         
     except Exception as e:
         # Update bookmark status to failed and store error message
