@@ -15,7 +15,7 @@ Arkive V4 is a bookmark knowledge API. It stores a user's saved URLs, fetches an
 The dashboard includes image-backed bookmark cards, fixed AI-assigned genres, editable genre
 chips, favorites, archive insights, saving activity charts, and recommendation prompts on the
 search page. During ingestion, Arkive extracts OpenGraph metadata and can classify content with
-OpenAI; without `OPENAI_API_KEY`, it uses a deterministic local classifier.
+Gemini; without `GEMINI_API_KEY`, it uses a deterministic local classifier.
 
 PostgreSQL is the source of truth. Redis/RQ and the local search index are derived processing infrastructure and can be rebuilt from stored bookmark content.
 
@@ -75,8 +75,6 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bookmarks_test
 REDIS_URL=redis://localhost:6379/0
 SECRET_KEY=replace-with-a-long-random-secret
 GEMINI_API_KEY=replace-with-your-key
-OPENAI_API_KEY=replace-with-your-key
-OPENAI_MODEL=gpt-4o-mini
 ```
 
 `CHROMA_PERSIST_DIRECTORY`, `CHROMA_COLLECTION_NAME`, and token expiry have sensible defaults and can also be overridden through environment variables. The two `CHROMA_*` names are retained for configuration compatibility; the index is stored as a SQLite file in that directory. Never commit `.env`, production secrets, database files, or generated `data/` content.

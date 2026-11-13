@@ -49,30 +49,27 @@ def _fallback_genres(title: str, body: str) -> list[str]:
     return found[:3] or ["News"]
 
 def categorize_content(title: str, body: str) -> list[str]:
-    """Classify content into the fixed genre vocabulary, with a local fallback."""
-    if not settings.OPENAI_API_KEY:
+    """Classify content with Gemini using the fixed genre vocabulary."""
+    if not settings.GEMINI_API_KEY:
         return _fallback_genres(title, body)
     try:
-        from urllib.request import Request, urlopen
-        payload = json.dumps({
-            "model": settings.OPENAI_MODEL,
-            "temperature": 0,
-            "messages": [
-                {"role": "system", "content": f"Return only a JSON array using these genres: {', '.join(GENRES)}."},
-                {"role": "user", "content": f"Title: {title}\nContent: {body[:6000]}"},
-            ],
-        }).encode()
-        request = Request(
-            "https://api.openai.com/v1/chat/completions",
-            data=payload,
-            headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}", "Content-Type": "application/json"},
+        from app.services.gemini_service import generate_chat_response
+        response = generate_chat_response(
+            f"""Classify this saved web page into up to three genres.
+Use only this fixed vocabulary: {", ".join(GENRES)}.
+Return only a valid JSON array of strings, with no markdown or explanation.
+
+Title: {title}
+Content:
+{body[:6000]}"""
         )
-        with urlopen(request, timeout=20) as response:
-            result = json.loads(response.read().decode())
-        values = json.loads(result["choices"][0]["message"]["content"])
+        values = json.loads(response.strip().removeprefix("```json").removesuffix("```").strip())
         return [value for value in values if value in GENRES][:3] or _fallback_genres(title, body)
-    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
-        logger.exception("OpenAI genre categorization failed; using local classification")
+    except (TypeError, ValueError, json.JSONDecodeError):
+        logger.exception("Gemini genre categorization returned invalid data; using local classification")
+        return _fallback_genres(title, body)
+    except Exception:
+        logger.exception("Gemini genre categorization failed; using local classification")
         return _fallback_genres(title, body)
 
 def get_bookmark(db: Session, bookmark_id: uuid.UUID, user_id: uuid.UUID) -> Bookmark | None:
