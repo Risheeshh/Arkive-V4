@@ -75,15 +75,7 @@ function LandingVisual() {
 function LibraryVisuals() {
   return <div className="library-visuals" aria-hidden="true">
     <div className="library-glow glow-purple" /><div className="library-glow glow-teal" />
-    <motion.div className="library-image image-a" animate={{ y: [0, -18, 0], rotate: [-6, -3, -6] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}>
-      <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=500&q=75" alt="" />
-    </motion.div>
-    <motion.div className="library-image image-b" animate={{ y: [0, 15, 0], rotate: [7, 4, 7] }} transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 2 }}>
-      <img src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=500&q=75" alt="" />
-    </motion.div>
-    <motion.div className="library-image image-c" animate={{ y: [0, -10, 0], rotate: [3, 6, 3] }} transition={{ duration: 11, repeat: Infinity, ease: "easeInOut", delay: 1 }}>
-      <img src="https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=500&q=75" alt="" />
-    </motion.div>
+    <div className="library-ring ring-large" /><div className="library-ring ring-small" />
     <div className="library-scanline" />
   </div>;
 }
