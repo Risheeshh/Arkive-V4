@@ -285,6 +285,18 @@ def extract_with_http(url: str) -> dict | None:
         logger.warning(f"HTTP extraction failed for {url}: {e}")
     return None
 
+
+def extract_visual_metadata(url: str) -> dict:
+    """Fetch lightweight OpenGraph metadata for cards without replacing article extraction."""
+    extracted = extract_with_http(url)
+    if not extracted:
+        return {}
+    return {
+        key: extracted.get(key)
+        for key in ("site_name", "logo_url", "image_url", "description")
+        if extracted.get(key)
+    }
+
 def clean_text(text: str) -> str:
     """Clean and normalize extracted text."""
     if not text:
@@ -322,6 +334,10 @@ def process_bookmark(db: Session, bookmark_id: uuid.UUID):
         cleaned_body = clean_text(extracted["body"])
         cleaned_title = clean_text(extracted["title"]) if extracted["title"] else bookmark.title
         genres = categorize_content(cleaned_title, cleaned_body)
+        visual_metadata = {
+            **extract_visual_metadata(bookmark.url),
+            **{key: value for key, value in extracted.items() if value},
+        }
 
         # Create Content row
         content = Content(
@@ -334,10 +350,10 @@ def process_bookmark(db: Session, bookmark_id: uuid.UUID):
             published_at=extracted.get("published_at")
         )
         db.add(content)
-        bookmark.site_name = extracted.get("site_name") or (urlparse(bookmark.url).hostname or "").replace("www.", "")
-        bookmark.logo_url = extracted.get("logo_url")
-        bookmark.image_url = extracted.get("image_url")
-        bookmark.excerpt = extracted.get("description") or cleaned_body[:240]
+        bookmark.site_name = visual_metadata.get("site_name") or (urlparse(bookmark.url).hostname or "").replace("www.", "")
+        bookmark.logo_url = visual_metadata.get("logo_url")
+        bookmark.image_url = visual_metadata.get("image_url")
+        bookmark.excerpt = visual_metadata.get("description") or cleaned_body[:240]
         bookmark.genres = genres
         
         # Update bookmark status to read

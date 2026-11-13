@@ -1,5 +1,5 @@
 import uuid
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, field_validator
 from datetime import datetime
 from typing import Optional, List
 from app.models.bookmark import BookmarkStatus
@@ -21,6 +21,17 @@ class BookmarkUpdate(BaseModel):
     status: Optional[BookmarkStatus] = None
     genres: Optional[List[str]] = None
     is_favorite: Optional[bool] = None
+
+    @field_validator("genres")
+    @classmethod
+    def validate_genres(cls, value: Optional[List[str]]) -> Optional[List[str]]:
+        if value is None:
+            return value
+        from app.services.bookmark_service import GENRES
+        invalid = sorted(set(value) - set(GENRES))
+        if invalid:
+            raise ValueError(f"Unsupported genres: {', '.join(invalid)}")
+        return list(dict.fromkeys(value))
 
 class BookmarkResponse(BookmarkBase):
     id: uuid.UUID
