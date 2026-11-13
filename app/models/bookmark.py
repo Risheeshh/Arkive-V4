@@ -1,6 +1,6 @@
 import uuid
 import enum
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Enum, func
+from sqlalchemy import Boolean, Column, String, Text, DateTime, ForeignKey, Enum, func, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -27,6 +27,12 @@ class Bookmark(Base):
         nullable=False,
     )
     error_message = Column(Text, nullable=True)
+    site_name = Column(String, nullable=True)
+    logo_url = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)
+    excerpt = Column(Text, nullable=True)
+    genres = Column(JSON, nullable=False, default=list)
+    is_favorite = Column(Boolean, nullable=False, default=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

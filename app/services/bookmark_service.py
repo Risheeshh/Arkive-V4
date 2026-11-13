@@ -6,13 +6,74 @@ from app.schemas.bookmark import BookmarkCreate, BookmarkUpdate
 from app.schemas.tag import TagCreate
 import uuid
 import trafilatura
-from playwright.sync_api import sync_playwright
+from html.parser import HTMLParser
+from urllib.request import Request, urlopen
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:
+    sync_playwright = None
 import logging
+import json
+import re
+from urllib.parse import urljoin, urlparse
 from app.core.queue import queue
+from app.core.config import settings
 from datetime import datetime
 from rq import Retry
 
 logger = logging.getLogger(__name__)
+
+GENRES = [
+    "Artificial Intelligence", "Business", "Career", "Design", "Development",
+    "Education", "Finance", "Health", "Lifestyle", "Marketing", "News",
+    "Photography", "Productivity", "Science", "Security", "Travel", "Writing",
+]
+
+def _fallback_genres(title: str, body: str) -> list[str]:
+    text = f"{title} {body}".lower()
+    matches = {
+        "Artificial Intelligence": ("ai", "machine learning", "llm", "neural"),
+        "Development": ("code", "developer", "python", "javascript", "api"),
+        "Design": ("design", "typography", "figma", "ux", "ui"),
+        "Business": ("business", "startup", "company", "strategy"),
+        "Productivity": ("productivity", "focus", "workflow", "habit"),
+        "Science": ("science", "research", "experiment"),
+        "Security": ("security", "privacy", "encryption", "vulnerability"),
+        "Finance": ("finance", "investing", "market", "money"),
+        "Health": ("health", "fitness", "wellness", "medical"),
+        "Travel": ("travel", "destination", "flight", "hotel"),
+        "Writing": ("writing", "author", "story", "journal"),
+        "Education": ("learn", "education", "course", "tutorial"),
+    }
+    found = [genre for genre, keywords in matches.items() if any(keyword in text for keyword in keywords)]
+    return found[:3] or ["News"]
+
+def categorize_content(title: str, body: str) -> list[str]:
+    """Classify content into the fixed genre vocabulary, with a local fallback."""
+    if not settings.OPENAI_API_KEY:
+        return _fallback_genres(title, body)
+    try:
+        from urllib.request import Request, urlopen
+        payload = json.dumps({
+            "model": settings.OPENAI_MODEL,
+            "temperature": 0,
+            "messages": [
+                {"role": "system", "content": f"Return only a JSON array using these genres: {', '.join(GENRES)}."},
+                {"role": "user", "content": f"Title: {title}\nContent: {body[:6000]}"},
+            ],
+        }).encode()
+        request = Request(
+            "https://api.openai.com/v1/chat/completions",
+            data=payload,
+            headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}", "Content-Type": "application/json"},
+        )
+        with urlopen(request, timeout=20) as response:
+            result = json.loads(response.read().decode())
+        values = json.loads(result["choices"][0]["message"]["content"])
+        return [value for value in values if value in GENRES][:3] or _fallback_genres(title, body)
+    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+        logger.exception("OpenAI genre categorization failed; using local classification")
+        return _fallback_genres(title, body)
 
 def get_bookmark(db: Session, bookmark_id: uuid.UUID, user_id: uuid.UUID) -> Bookmark | None:
     return db.query(Bookmark).filter(Bookmark.id == bookmark_id, Bookmark.user_id == user_id).first()
@@ -134,7 +195,9 @@ def extract_with_trafilatura(url: str) -> dict | None:
     return None
 
 def extract_with_playwright(url: str) -> dict | None:
-    """Extract content using Playwright as fallback."""
+    """Extract content with an optional browser or a lightweight HTTP fallback."""
+    if sync_playwright is None:
+        return extract_with_http(url)
     browser = None
     try:
         with sync_playwright() as p:
@@ -159,6 +222,67 @@ def extract_with_playwright(url: str) -> dict | None:
     finally:
         if browser:
             browser.close()
+    return None
+
+
+class _TextParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.title = ""
+        self.text: list[str] = []
+        self._in_title = False
+        self._ignored = 0
+        self.meta: dict[str, str] = {}
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "meta":
+            attributes = dict(attrs)
+            key = attributes.get("property") or attributes.get("name")
+            value = attributes.get("content")
+            if key and value:
+                self.meta[key] = value
+        if tag == "title":
+            self._in_title = True
+        elif tag in {"script", "style", "noscript"}:
+            self._ignored += 1
+
+    def handle_endtag(self, tag):
+        if tag == "title":
+            self._in_title = False
+        elif tag in {"script", "style", "noscript"} and self._ignored:
+            self._ignored -= 1
+
+    def handle_data(self, data):
+        if self._in_title:
+            self.title += data
+        elif not self._ignored and data.strip():
+            self.text.append(data.strip())
+
+
+def extract_with_http(url: str) -> dict | None:
+    """Extract readable text from pages without requiring a browser runtime."""
+    try:
+        request = Request(url, headers={"User-Agent": "Arkive/1.0"})
+        with urlopen(request, timeout=30) as response:
+            html = response.read().decode(response.headers.get_content_charset() or "utf-8", "replace")
+        parser = _TextParser()
+        parser.feed(html)
+        body = "\n".join(parser.text)
+        if body:
+            metadata = dict(parser.meta)
+            host = urlparse(url).hostname or ""
+            return {
+                "title": parser.title.strip() or None,
+                "body": body,
+                "author": None,
+                "published_at": None,
+                "site_name": metadata.get("og:site_name") or host.replace("www.", ""),
+                "image_url": urljoin(url, metadata["og:image"]) if metadata.get("og:image") else None,
+                "description": metadata.get("description") or metadata.get("og:description"),
+                "logo_url": urljoin(url, "/favicon.ico"),
+            }
+    except Exception as e:
+        logger.warning(f"HTTP extraction failed for {url}: {e}")
     return None
 
 def clean_text(text: str) -> str:
@@ -197,6 +321,7 @@ def process_bookmark(db: Session, bookmark_id: uuid.UUID):
         # Clean the extracted text
         cleaned_body = clean_text(extracted["body"])
         cleaned_title = clean_text(extracted["title"]) if extracted["title"] else bookmark.title
+        genres = categorize_content(cleaned_title, cleaned_body)
 
         # Create Content row
         content = Content(
@@ -209,6 +334,11 @@ def process_bookmark(db: Session, bookmark_id: uuid.UUID):
             published_at=extracted.get("published_at")
         )
         db.add(content)
+        bookmark.site_name = extracted.get("site_name") or (urlparse(bookmark.url).hostname or "").replace("www.", "")
+        bookmark.logo_url = extracted.get("logo_url")
+        bookmark.image_url = extracted.get("image_url")
+        bookmark.excerpt = extracted.get("description") or cleaned_body[:240]
+        bookmark.genres = genres
         
         # Update bookmark status to read
         bookmark.status = BookmarkStatus.READ

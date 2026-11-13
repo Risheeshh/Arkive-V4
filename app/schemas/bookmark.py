@@ -19,6 +19,8 @@ class BookmarkUpdate(BaseModel):
     url: Optional[HttpUrl] = None
     description: Optional[str] = None
     status: Optional[BookmarkStatus] = None
+    genres: Optional[List[str]] = None
+    is_favorite: Optional[bool] = None
 
 class BookmarkResponse(BookmarkBase):
     id: uuid.UUID
@@ -29,6 +31,12 @@ class BookmarkResponse(BookmarkBase):
     updated_at: datetime
     content: Optional[ContentResponse] = None
     tags: List[TagResponse] = []
+    site_name: Optional[str] = None
+    logo_url: Optional[str] = None
+    image_url: Optional[str] = None
+    excerpt: Optional[str] = None
+    genres: List[str] = []
+    is_favorite: bool = False
 
     class Config:
         from_attributes = True
